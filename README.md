@@ -27,3 +27,4 @@ If you were using Claude to build this app, you would:
 7. Back in your terminal, run: `git remote add origin https://github.com/yourusername/weather-app.git`
 8. Run `git branch -M main` (if not already main).
 9. Run `git push -u origin main` to upload the files.
+# weather-app
