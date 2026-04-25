@@ -59,7 +59,7 @@ if (!Array.isArray(recentSearches)) recentSearches = [];
 let currentDataCache = null;
 let forecastDataCache = null;
 
-const API_KEY = 'YOUR_NEW_API_KEY_HERE'; // Replace with your new key and restrict it in OWM dashboard
+const API_KEY = '94e60d62d6384f6676d6671ea1725211'; // Restrict this key to your domain in OWM dashboard
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 // ─── CACHE LAYER ──────────────────────────────────────────────────────────────
