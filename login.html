@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In — Weather App</title>
+    <meta name="description" content="Sign in to the Ultimate Weather App and get real-time weather worldwide.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+        :root {
+            --font: 'Poppins', sans-serif;
+            --bg: #0f111a;
+            --card: rgba(25,28,41,.72);
+            --border: rgba(255,255,255,.1);
+            --accent: #4facfe;
+            --accent2: #00f2fe;
+            --text: #ffffff;
+            --dim: rgba(255,255,255,.55);
+            --error-c: #ff6b6b;
+            --input-bg: rgba(255,255,255,.04);
+            --btn-text: #0f111a;
+        }
+
+        [data-theme="light"] {
+            --bg: #f0f2ff;
+            --card: rgba(255,255,255,.85);
+            --border: rgba(99,102,241,.15);
+            --text: #0f0f23;
+            --dim: rgba(15,15,35,.65);
+            --error-c: #ef4444;
+            --input-bg: rgba(255,255,255,.6);
+            --btn-text: #ffffff;
+        }
+
+        /* Weather/Temperature Themes */
+        [data-theme="weather-hot"] { --bg: #1a0a00; --card: rgba(45,15,0,.72); --border: rgba(251,146,60,.15); --accent: #f97316; --accent2: #ef4444; --text: #fff7ed; --dim: rgba(255,237,213,.55); --input-bg: rgba(251,146,60,.06); --btn-text: #1a0a00; }
+        [data-theme="weather-warm"] { --bg: #1a1000; --card: rgba(40,30,5,.72); --border: rgba(251,191,36,.15); --accent: #f59e0b; --accent2: #f97316; --text: #fffbeb; --dim: rgba(254,249,195,.55); --input-bg: rgba(245,158,11,.06); --btn-text: #1a1000; }
+        [data-theme="weather-mild"] { --bg: #021a09; --card: rgba(5,35,15,.72); --border: rgba(74,222,128,.12); --accent: #22c55e; --accent2: #38f9d7; --text: #f0fdf4; --dim: rgba(220,252,231,.55); --input-bg: rgba(34,197,94,.06); --btn-text: #021a09; }
+        [data-theme="weather-cool"] { --bg: #020b1a; --card: rgba(8,20,45,.72); --border: rgba(96,165,250,.12); --accent: #3b82f6; --accent2: #60a5fa; --text: #eff6ff; --dim: rgba(219,234,254,.55); --input-bg: rgba(59,130,246,.06); --btn-text: #020b1a; }
+        [data-theme="weather-cold"] { --bg: #0a0520; --card: rgba(15,10,40,.72); --border: rgba(139,92,246,.12); --accent: #8b5cf6; --accent2: #a78bfa; --text: #f5f3ff; --dim: rgba(237,233,254,.55); --input-bg: rgba(139,92,246,.06); --btn-text: #0a0520; }
+        [data-theme="weather-freezing"] { --bg: #001520; --card: rgba(2,25,45,.72); --border: rgba(103,232,249,.12); --accent: #06b6d4; --accent2: #67e8f9; --text: #ecfeff; --dim: rgba(207,250,254,.55); --input-bg: rgba(6,182,212,.06); --btn-text: #001520; }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px; overflow-x: hidden;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .orb { position:fixed; border-radius:50%; filter:blur(90px); pointer-events:none; z-index:0; }
+        .orb-1 { width:420px;height:420px; background:radial-gradient(circle,rgba(79,172,254,.14),transparent); top:-120px;left:-100px; animation:o1 14s ease-in-out infinite alternate; }
+        .orb-2 { width:320px;height:320px; background:radial-gradient(circle,rgba(0,242,254,.10),transparent); bottom:-80px;right:-80px; animation:o2 18s ease-in-out infinite alternate; }
+        .orb-3 { width:180px;height:180px; background:radial-gradient(circle,rgba(79,172,254,.07),transparent); top:55%;left:55%; animation:o3 11s ease-in-out infinite alternate; }
+        @keyframes o1 { to{transform:translate(60px,90px) scale(1.12);} }
+        @keyframes o2 { to{transform:translate(-50px,-70px) scale(1.18);} }
+        @keyframes o3 { to{transform:translate(-50%,-50%) scale(1.4);} }
+
+        .card {
+            position:relative; z-index:1;
+            width:100%; max-width:420px;
+            background:var(--card);
+            border:1px solid var(--border); border-radius:28px;
+            padding:48px 42px;
+            backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px);
+            box-shadow:0 8px 48px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
+            animation:rise .5s ease forwards;
+        }
+        @keyframes rise { from{opacity:0;transform:translateY(22px);} to{opacity:1;transform:translateY(0);} }
+
+        .logo { display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:26px; }
+        .logo-icon {
+            width:46px; height:46px;
+            background:linear-gradient(135deg,var(--accent),var(--accent2));
+            border-radius:13px; display:flex; align-items:center; justify-content:center;
+            font-size:1.35rem; box-shadow:0 4px 18px rgba(79,172,254,.4);
+        }
+        .logo-name {
+            font-size:1.25rem; font-weight:700;
+            background:linear-gradient(to right,var(--accent),var(--accent2));
+            -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+        }
+
+        .card h1 { font-size:1.55rem; font-weight:700; text-align:center; margin-bottom:6px; }
+        .card p.sub { font-size:.87rem; color:var(--dim); text-align:center; margin-bottom:32px; }
+
+        .alert {
+            display:none; align-items:center; gap:10px;
+            padding:12px 15px; border-radius:11px; font-size:.84rem;
+            margin-bottom:18px; animation:fadeIn .3s ease;
+        }
+        .alert.show { display:flex; }
+        .alert.error { background:rgba(255,107,107,.12); border:1px solid rgba(255,107,107,.3); color:var(--error-c); }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+
+        .form-group { margin-bottom:20px; }
+        .form-group label { display:block; font-size:.8rem; font-weight:500; color:var(--dim); margin-bottom:7px; }
+        .input-wrap { position:relative; }
+        .input-wrap i.pre {
+            position:absolute; left:16px; top:50%; transform:translateY(-50%);
+            color:var(--dim); font-size:.88rem; pointer-events:none; transition:color .3s;
+        }
+        .form-group:focus-within .pre { color:var(--accent); }
+        .input-wrap input {
+            width:100%; padding:13px 45px;
+            background: var(--input-bg);
+            border:1px solid var(--border); border-radius:12px;
+            color:var(--text); font-family:var(--font); font-size:.93rem;
+            outline:none; transition:border-color .3s, box-shadow .3s, background .3s;
+        }
+        .input-wrap input:focus {
+            border-color:var(--accent);
+            background:rgba(79,172,254,.06);
+            box-shadow:0 0 0 3px rgba(79,172,254,.18);
+        }
+        .input-wrap input::placeholder { color: var(--dim); }
+        .toggle-pw {
+            position:absolute; right:14px; top:50%; transform:translateY(-50%);
+            background:none; border:none; color:var(--dim); cursor:pointer;
+            font-size:.88rem; transition:color .3s; padding:4px;
+        }
+        .toggle-pw:hover { color:var(--accent); }
+
+        .pw-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; }
+        .pw-row label { margin-bottom:0; }
+        .forgot { font-size:.78rem; color:var(--accent); text-decoration:none; transition:opacity .2s; }
+        .forgot:hover { opacity:.7; }
+
+        .btn {
+            width:100%; padding:14px; border:none; border-radius:12px;
+            background:linear-gradient(135deg,var(--accent),var(--accent2));
+            color: var(--btn-text); font-family:var(--font); font-size:.97rem; font-weight:600;
+            cursor:pointer; margin-top:6px; position:relative; overflow:hidden;
+            transition:transform .2s, box-shadow .2s;
+            box-shadow:0 4px 20px rgba(79,172,254,.35);
+        }
+        .btn::after {
+            content:''; position:absolute; top:0; left:-110%; width:80%; height:100%;
+            background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);
+            transform:skewX(-20deg); transition:left .45s;
+        }
+        .btn:hover::after { left:130%; }
+        .btn:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(79,172,254,.5); }
+        .btn:active { transform:translateY(0); }
+        .btn:disabled { opacity:.65; cursor:not-allowed; transform:none; }
+
+        .spin-inline { display:none; width:18px;height:18px; border:2px solid rgba(0,0,0,.25); border-top-color:#0f111a; border-radius:50%; animation:spin .75s linear infinite; margin:0 auto; }
+        .btn.loading .btn-lbl { display:none; }
+        .btn.loading .spin-inline { display:block; }
+        @keyframes spin { to{transform:rotate(360deg);} }
+
+        .footer-link { text-align:center; margin-top:24px; font-size:.85rem; color:var(--dim); }
+        .footer-link a { color:var(--accent); text-decoration:none; font-weight:500; transition:opacity .2s; }
+        .footer-link a:hover { opacity:.75; }
+
+        /* Decorative shimmer on card top */
+        .forgot-pw {
+            display:block; text-align:right; font-size:.85rem; color:var(--accent);
+            text-decoration:none; margin-top:8px; font-weight:500;
+        }
+        .forgot-pw:hover { text-decoration:underline; }
+
+        .card::before {
+            content:''; position:absolute; top:0; left:0; right:0; height:1px;
+            background:linear-gradient(90deg,transparent,rgba(79,172,254,.5),transparent);
+            border-radius:28px 28px 0 0;
+        }
+
+        .theme-toggle {
+            position: absolute; top: 20px; right: 20px;
+            background: var(--card); border: 1px solid var(--border);
+            color: var(--text); border-radius: 50%;
+            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <button class="theme-toggle" id="theme-toggle" title="Toggle theme">
+        <i class="fa-solid fa-moon" id="theme-icon"></i>
+    </button>
+
+    <div class="card">
+        <div class="logo">
+            <div class="logo-icon"><i class="fa-solid fa-cloud-sun"></i></div>
+            <span class="logo-name">WeatherApp</span>
+        </div>
+        <h1>Welcome Back</h1>
+        <p class="sub">Sign in to continue to your dashboard</p>
+
+        <div class="alert error" id="err-alert">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span id="err-msg">Invalid email or password.</span>
+        </div>
+
+        <form id="login-form" novalidate>
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <div class="input-wrap">
+                    <i class="fa-solid fa-envelope pre"></i>
+                    <input type="email" id="email" placeholder="you@example.com" required autocomplete="email">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="pw-row">
+                    <label for="password">Password</label>
+                    <a href="#" class="forgot">Forgot password?</a>
+                </div>
+                <div class="input-wrap">
+                    <i class="fa-solid fa-lock pre"></i>
+                    <input type="password" id="password" placeholder="Enter your password" required autocomplete="current-password">
+                    <button type="button" class="toggle-pw" id="toggle-pw" aria-label="Toggle password">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn" id="submit-btn">
+                <span class="btn-lbl">Sign In &nbsp;<i class="fa-solid fa-arrow-right"></i></span>
+                <div class="spin-inline"></div>
+            </button>
+        </form>
+
+        <div class="footer-link">
+            Don't have an account? <a href="signup.html">Create one</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth.js"></script>
+    <script>
+        // Redirect if already logged in
+        getSession().then(s => { if (s) window.location.href = 'index.html'; });
+
+        // Theme Toggle (3-mode: dark → light → auto/weather)
+        const html = document.documentElement;
+        const themeIcon = document.getElementById('theme-icon');
+        let currentTheme = localStorage.getItem('theme') || 'dark';
+        if (!['dark','light','auto'].includes(currentTheme)) currentTheme = 'dark';
+        function getWeatherThemeName(tempC) {
+            if (tempC > 35) return 'weather-hot';
+            if (tempC > 25) return 'weather-warm';
+            if (tempC > 15) return 'weather-mild';
+            if (tempC > 5) return 'weather-cool';
+            if (tempC > 0) return 'weather-cold';
+            return 'weather-freezing';
+        }
+        function applyTheme() {
+            localStorage.setItem('theme', currentTheme);
+            if (currentTheme === 'auto') {
+                const lastTemp = parseFloat(localStorage.getItem('lastTempC'));
+                const wt = isNaN(lastTemp) ? 'weather-mild' : getWeatherThemeName(lastTemp);
+                html.setAttribute('data-theme', wt);
+                themeIcon.className = 'fa-solid fa-temperature-half';
+            } else {
+                html.setAttribute('data-theme', currentTheme);
+                themeIcon.className = currentTheme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+            }
+        }
+        applyTheme();
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            if (currentTheme === 'dark') currentTheme = 'light';
+            else if (currentTheme === 'light') currentTheme = 'auto';
+            else currentTheme = 'dark';
+            applyTheme();
+        });
+
+        // Password toggle
+        document.getElementById('toggle-pw').addEventListener('click', () => {
+            const inp = document.getElementById('password');
+            const ico = document.querySelector('#toggle-pw i');
+            inp.type = inp.type === 'password' ? 'text' : 'password';
+            ico.className = inp.type === 'password' ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
+        });
+
+        // Forgot Password Logic
+        let isResetMode = false;
+        const forgotLink = document.querySelector('.forgot');
+        const pwGroup = document.querySelector('.form-group:nth-of-type(2)');
+        const btnLbl = document.querySelector('.btn-lbl');
+        const titleText = document.querySelector('h1');
+        const subText = document.querySelector('.sub');
+        
+        forgotLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            isResetMode = !isResetMode;
+            if (isResetMode) {
+                pwGroup.querySelector('.input-wrap').style.display = 'none';
+                forgotLink.textContent = "Back to Sign In";
+                btnLbl.innerHTML = 'Send Reset Link &nbsp;<i class="fa-solid fa-envelope"></i>';
+                titleText.textContent = "Reset Password";
+                subText.textContent = "Enter your email to receive a reset link";
+            } else {
+                pwGroup.querySelector('.input-wrap').style.display = 'block';
+                forgotLink.textContent = "Forgot password?";
+                btnLbl.innerHTML = 'Sign In &nbsp;<i class="fa-solid fa-arrow-right"></i>';
+                titleText.textContent = "Welcome Back";
+                subText.textContent = "Sign in to continue to your dashboard";
+            }
+        });
+
+        // Form submit
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email    = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            document.getElementById('err-alert').classList.remove('show');
+            if (!email) return showError('Please fill in your email.');
+            if (!isResetMode && !password) return showError('Please fill in your password.');
+
+            setLoading(true);
+            if (isResetMode) {
+                // Handle Password Reset
+                const { data, error } = await resetPassword(email);
+                setLoading(false);
+                if (error) {
+                    showError(error.message);
+                } else {
+                    alert('Password reset link has been sent to your email! (Please check your spam folder)');
+                    forgotLink.click(); // Switch back to login UI
+                }
+                return;
+            }
+
+            // Handle Login
+            const { data, error } = await signIn(email, password);
+            setLoading(false);
+
+            if (error) {
+                showError(error.message);
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        function setLoading(on) {
+            const btn = document.getElementById('submit-btn');
+            btn.classList.toggle('loading', on);
+            btn.disabled = on;
+        }
+        function showError(msg) {
+            document.getElementById('err-msg').textContent = msg;
+            document.getElementById('err-alert').classList.add('show');
+        }
+    </script>
+</body>
+</html>

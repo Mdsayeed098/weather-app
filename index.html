@@ -1,90 +1,252 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultimate Weather App</title>
-    <!-- Google Fonts: Poppins -->
+    <title>WeatherIQ Dashboard</title>
+    <meta name="description" content="Premium weather dashboard with real-time data and forecasts.">
+    
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
-    <div id="particle-container"></div>
-    <div class="app-container">
+    <!-- Background overlay for weather effects -->
+    <div id="weather-bg"></div>
+
+    <!-- Auth Guard -->
+    <div class="auth-overlay" id="auth-overlay">
+        <div class="spinner"></div>
+        <p style="color: var(--text-secondary)">Verifying session...</p>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span id="toast-msg">Error message</span>
+    </div>
+
+    <!-- Main Container -->
+    <div class="app-container" id="app-container" style="display: none;">
+        
+        <!-- Header & Search -->
         <header class="app-header">
-            <div class="search-box">
-                <i class="fa-solid fa-location-dot location-icon"></i>
-                <input type="text" id="city-input" placeholder="Search for any city (e.g., Mumbai)..." autocomplete="off">
-                <button id="search-btn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+            <div class="search-wrapper">
+                <div class="search-box">
+                    <i class="fa-solid fa-location-dot location-icon"></i>
+                    <input type="text" id="city-input" placeholder="Search for any city..." autocomplete="off">
+                    <button id="search-btn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+                </div>
+                <ul id="search-dropdown" class="search-dropdown hidden"></ul>
             </div>
+
             <div class="header-controls">
-                <button id="unit-toggle" class="btn-glass">°C / °F</button>
+                <a href="signup.html" class="btn-glass" title="About Page" style="text-decoration: none;"><i class="fa-solid fa-circle-info"></i><span class="hide-mobile" style="margin-left: 8px;">About</span></a>
+                <button id="theme-toggle" class="btn-icon btn-glass" title="Toggle Theme">
+                    <i class="fa-solid fa-moon" id="theme-icon"></i>
+                </button>
+                <button id="unit-toggle" class="btn-glass" title="Toggle Units">°C / °F</button>
+                
+                <!-- Profile Link -->
+                <a href="profile.html" class="user-chip" style="text-decoration: none; color: inherit;">
+                    <i class="fa-solid fa-user"></i>
+                    <span id="user-display" style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle;">User</span>
+                </a>
+                
+                <button class="logout-btn" id="logout-btn" title="Sign Out">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
             </div>
         </header>
 
-        <main class="weather-card">
-            <!-- Loading Indicator -->
-            <div id="loading" class="loading-container hidden">
-                <div class="spinner"></div>
-                <p>Fetching weather data...</p>
-            </div>
+        <!-- Initial Loader -->
+        <div id="app-loader" class="loading-overlay hidden" style="position: absolute; inset: 0; border-radius: 20px;">
+            <div class="spinner"></div>
+            <p style="color: var(--text-secondary)">Fetching live weather data...</p>
+        </div>
 
-            <!-- Error Message -->
-            <div id="error-message" class="error-container hidden">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <p id="error-text">City not found. Please try again.</p>
-            </div>
-
-            <!-- Weather Information -->
-            <div id="weather-info" class="weather-info hidden">
-                <div class="main-weather">
-                    <div class="weather-icon-container">
-                        <img id="weather-icon" src="" alt="Weather Icon" class="weather-icon">
+        <main class="dashboard-grid" id="main-content">
+            
+            <!-- Left Col: Hero + Charts -->
+            <div class="hero-section">
+                <!-- Current Weather Hero -->
+                <div class="glass-card hero-card">
+                    <h1 id="location-name" class="skeleton" style="min-height: 40px; width: 60%; margin: 0 auto 4px;">--</h1>
+                    <p id="date-time" class="skeleton" style="min-height: 20px; width: 40%; margin: 0 auto 20px;">--</p>
+                    
+                    <div class="hero-temp-row">
+                        <img id="weather-icon-main" src="" alt="Weather" style="display:none;">
+                        <div class="skeleton" id="icon-skel" style="width: 100px; height: 100px; border-radius: 50%;"></div>
+                        <div>
+                            <span class="temp-huge skeleton" id="temperature" style="display: inline-block; min-width: 120px; min-height: 70px;"></span>
+                            <span class="temp-unit" id="current-unit" style="display: none;">°C</span>
+                        </div>
                     </div>
-                    <div class="temperature-container">
-                        <h1 id="temperature">--</h1>
-                        <span class="unit" id="current-unit">°C</span>
-                    </div>
-                    <h2 id="condition">--</h2>
-                    <h3 id="location">--</h3>
-                    <p id="date-time">--</p>
+                    <p id="condition-text" class="skeleton" style="min-height: 24px; width: 30%; margin: 10px auto 0;">--</p>
                 </div>
 
-                <div class="weather-details-grid">
-                    <div class="detail-card">
-                        <i class="fa-solid fa-droplet"></i>
-                        <p class="detail-label">Humidity</p>
-                        <p id="humidity" class="detail-value">--%</p>
+                <!-- Weather Alerts -->
+                <div class="glass-card">
+                    <h3 class="section-title"><i class="fa-solid fa-triangle-exclamation"></i> Weather Alerts</h3>
+                    <div class="alerts-container" id="alerts-container">
+                        <!-- Filled by JS -->
                     </div>
-                    <div class="detail-card">
-                        <i class="fa-solid fa-wind"></i>
-                        <p class="detail-label">Wind Speed</p>
-                        <p id="wind-speed" class="detail-value">-- km/h</p>
+                </div>
+
+                <!-- Hourly Forecast -->
+                <div class="glass-card">
+                    <h3 class="section-title"><i class="fa-regular fa-clock"></i> Today's Forecast</h3>
+                    <div class="hourly-strip" id="hourly-strip">
+                        <!-- Filled by JS -->
                     </div>
-                    <div class="detail-card">
-                        <i class="fa-solid fa-temperature-half"></i>
-                        <p class="detail-label">Feels Like</p>
-                        <p id="feels-like" class="detail-value">--°</p>
+                </div>
+
+                <!-- Temperature Chart -->
+                <div class="glass-card">
+                    <h3 class="section-title"><i class="fa-solid fa-chart-area"></i> Temperature Trend</h3>
+                    <div class="chart-container">
+                        <canvas id="tempChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Weather Insights -->
+                <div class="glass-card">
+                    <h3 class="section-title"><i class="fa-solid fa-lightbulb"></i> Smart Insights</h3>
+                    <div class="insights-grid" id="insights-list">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+
+                <!-- Compare Cities CTA -->
+                <a href="compare.html" class="glass-card compare-cta">
+                    <div class="compare-cta-icon"><i class="fa-solid fa-code-compare"></i></div>
+                    <div class="compare-cta-text">
+                        <h4>Compare Cities</h4>
+                        <p>See two cities side by side — temp, AQI, wind & more</p>
+                    </div>
+                    <i class="fa-solid fa-arrow-right compare-cta-arrow"></i>
+                </a>
+
+            </div>
+
+            <!-- Right Col: Detail Cards + 5-Day -->
+            <div class="right-col" style="display: flex; flex-direction: column; gap: 20px;">
+                
+                <div class="details-grid">
+                    <!-- UV Index -->
+                    <div class="glass-card detail-card">
+                        <div class="detail-head"><i class="fa-solid fa-sun"></i> UV Index</div>
+                        <div class="detail-val skeleton" id="uv-val" style="min-height: 35px; width: 50%;">--</div>
+                        <div class="detail-sub" id="uv-desc">--</div>
+                    </div>
+
+                    <!-- Wind -->
+                    <div class="glass-card detail-card">
+                        <div class="detail-head"><i class="fa-solid fa-wind"></i> Wind</div>
+                        <div class="wind-compass">
+                            <div class="compass-circle">
+                                <i class="fa-solid fa-location-arrow" id="wind-dir-icon"></i>
+                            </div>
+                            <div>
+                                <div class="detail-val skeleton" id="wind-speed" style="min-height: 35px; width: 80px; font-size: 1.4rem;">--</div>
+                                <div class="detail-sub" id="wind-dir-text">--</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Humidity -->
+                    <div class="glass-card detail-card">
+                        <div class="detail-head"><i class="fa-solid fa-droplet"></i> Humidity</div>
+                        <div class="detail-val skeleton" id="humidity" style="min-height: 35px; width: 60px;">--</div>
+                        <div class="detail-sub">The dew point is <span id="dew-point">--</span>°</div>
+                        <div class="progress-bg"><div class="progress-bar" id="hum-bar" style="width: 0%"></div></div>
+                    </div>
+
+                    <!-- Feels Like -->
+                    <div class="glass-card detail-card">
+                        <div class="detail-head"><i class="fa-solid fa-temperature-half"></i> Feels Like</div>
+                        <div class="detail-val skeleton" id="feels-like" style="min-height: 35px; width: 60px;">--</div>
+                        <div class="detail-sub" id="feels-desc">--</div>
+                    </div>
+
+                    <!-- AQI -->
+                    <div class="glass-card detail-card">
+                        <div class="detail-head"><i class="fa-solid fa-leaf"></i> Air Quality</div>
+                        <div class="detail-val skeleton" id="aqi-val" style="min-height: 35px; width: 40px;">--</div>
+                        <div class="aqi-badge skeleton" id="aqi-badge" style="width: 80px; height: 24px;">--</div>
+                    </div>
+
+                    <!-- Sun & Moon -->
+                    <div class="glass-card detail-card" style="grid-column: span 2;">
+                        <div class="detail-head"><i class="fa-solid fa-eclipse"></i> Sun & Moon</div>
+                        <div class="sun-times">
+                            <div class="sun-item">
+                                <label>Sunrise</label>
+                                <span class="skeleton" id="sunrise" style="min-height: 25px; width: 60px;">--</span>
+                            </div>
+                            <div class="sun-item">
+                                <label>Sunset</label>
+                                <span class="skeleton" id="sunset" style="min-height: 25px; width: 60px;">--</span>
+                            </div>
+                            <div class="sun-item" style="text-align: right;">
+                                <label>Moon Phase</label>
+                                <span class="skeleton" id="moon-phase" style="min-height: 25px; width: 100px;">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pressure & Visibility -->
+                    <div class="glass-card detail-card">
+                        <div class="detail-head"><i class="fa-solid fa-gauge-high"></i> Pressure</div>
+                        <div class="detail-val skeleton" id="pressure" style="min-height: 35px; width: 80px; font-size: 1.4rem;">--</div>
+                        <div class="detail-sub">hPa</div>
+                    </div>
+                    <div class="glass-card detail-card">
+                        <div class="detail-head"><i class="fa-solid fa-eye"></i> Visibility</div>
+                        <div class="detail-val skeleton" id="visibility" style="min-height: 35px; width: 80px; font-size: 1.4rem;">--</div>
+                        <div class="detail-sub" id="vis-desc">--</div>
+                    </div>
+                </div>
+
+                <!-- 5 Day Forecast -->
+                <div class="glass-card">
+                    <h3 class="section-title"><i class="fa-regular fa-calendar-days"></i> 5-Day Forecast</h3>
+                    <div class="daily-grid" id="daily-grid">
+                        <!-- Filled by JS -->
                     </div>
                 </div>
             </div>
         </main>
 
-        <!-- 5 Day Forecast -->
-        <section class="forecast-container hidden" id="forecast-container">
-            <h3 class="forecast-title">5-Day Forecast</h3>
-            <div class="forecast-grid" id="forecast-grid">
-                <!-- Forecast child elements will be injected here by JS -->
-            </div>
-        </section>
+        <!-- Live Radar Full Width -->
+        <div class="glass-card full-width-map">
+            <h3 class="section-title"><i class="fa-solid fa-map-location-dot"></i> Live Radar</h3>
+            <div id="map" class="skeleton"></div>
+        </div>
     </div>
 
-    <!-- Custom JS -->
-    <script src="app.js"></script>
+    <!-- Scripts -->
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Main App Logic -->
+    <script src="app.js?v=2"></script>
 </body>
 </html>
