@@ -1,5 +1,5 @@
 // ─── Compare Cities Logic ─────────────────────────────────────────────────────
-const API_KEY = '711cfc95cb2a3500db205dea4a46dd6a';
+const API_KEY = 'YOUR_NEW_API_KEY_HERE';
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 let isCelsius = localStorage.getItem('unitPref') !== 'F';
