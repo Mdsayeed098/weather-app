@@ -59,8 +59,7 @@ if (!Array.isArray(recentSearches)) recentSearches = [];
 let currentDataCache = null;
 let forecastDataCache = null;
 
-const API_KEY = '94e60d62d6384f6676d6671ea1725211'; // Restrict this key to your domain in OWM dashboard
-const BASE_URL = 'https://api.openweathermap.org/data/2.5';
+const BASE_URL = 'http://localhost:3000/api'; // Proxies to Node.js backend
 
 // ─── CACHE LAYER ──────────────────────────────────────────────────────────────
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
@@ -239,7 +238,7 @@ function showLoaders() {
 async function fetchAllDataByCity(city) {
     showLoaders();
     try {
-        const geoRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${API_KEY}`);
+        const geoRes = await fetch(`http://localhost:3000/api/geo/direct?q=${city}&limit=1`);
         const geoData = await geoRes.json();
         if (!geoData.length) throw new Error('City not found');
         const { lat, lon, name, state, country } = geoData[0];
@@ -266,9 +265,9 @@ async function fetchAllData(lat, lon, overrideName = null, overrideCountry = nul
             console.log('📦 Using cached data');
         } else {
             const [currentRes, forecastRes, aqiRes] = await Promise.all([
-                fetch(`${BASE_URL}/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}`),
-                fetch(`${BASE_URL}/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}`),
-                fetch(`${BASE_URL}/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`)
+                fetch(`${BASE_URL}/weather?lat=${lat}&lon=${lon}`),
+                fetch(`${BASE_URL}/forecast?lat=${lat}&lon=${lon}`),
+                fetch(`${BASE_URL}/air_pollution?lat=${lat}&lon=${lon}`)
             ]);
 
             if (!currentRes.ok) throw new Error('Failed to fetch weather data');
@@ -312,7 +311,7 @@ async function handleAutocomplete() {
     if (!q) return renderDropdown(recentSearches, true);
 
     try {
-        const res = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${q}&limit=5&appid=${API_KEY}`);
+        const res = await fetch(`http://localhost:3000/api/geo/direct?q=${q}&limit=5`);
         const data = await res.json();
         renderDropdown(data, false);
     } catch (err) { console.error(err); }

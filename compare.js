@@ -1,6 +1,5 @@
 // ─── Compare Cities Logic ─────────────────────────────────────────────────────
-const API_KEY = '94e60d62d6384f6676d6671ea1725211';
-const BASE_URL = 'https://api.openweathermap.org/data/2.5';
+const BASE_URL = 'http://localhost:3000/api';
 
 let isCelsius = localStorage.getItem('unitPref') !== 'F';
 
@@ -136,7 +135,7 @@ async function handleAutocomplete(input, dropdown) {
     if (!q || q.length < 2) { dropdown.classList.remove('open'); return; }
 
     try {
-        const res = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${q}&limit=5&appid=${API_KEY}`);
+        const res = await fetch(`http://localhost:3000/api/geo/direct?q=${q}&limit=5`);
         const data = await res.json();
         dropdown.innerHTML = '';
         if (!data.length) { dropdown.classList.remove('open'); return; }
@@ -183,7 +182,7 @@ async function doCompare() {
 
 async function fetchCityData(city) {
     // Geocode first
-    const geoRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${API_KEY}`);
+    const geoRes = await fetch(`http://localhost:3000/api/geo/direct?q=${city}&limit=1`);
     const geoData = await geoRes.json();
     if (!geoData.length) throw new Error(`City "${city}" not found.`);
     const { lat, lon, name, country } = geoData[0];
@@ -199,8 +198,8 @@ async function fetchCityData(city) {
 
     // Fetch fresh
     const [weatherRes, aqiRes] = await Promise.all([
-        fetch(`${BASE_URL}/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}`),
-        fetch(`${BASE_URL}/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`)
+        fetch(`${BASE_URL}/weather?lat=${lat}&lon=${lon}`),
+        fetch(`${BASE_URL}/air_pollution?lat=${lat}&lon=${lon}`)
     ]);
 
     if (!weatherRes.ok) throw new Error('Failed to fetch weather data.');
