@@ -1,5 +1,5 @@
 // ─── Compare Cities Logic ─────────────────────────────────────────────────────
-const BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = '/api';
 
 let isCelsius = localStorage.getItem('unitPref') !== 'F';
 
@@ -135,7 +135,7 @@ async function handleAutocomplete(input, dropdown) {
     if (!q || q.length < 2) { dropdown.classList.remove('open'); return; }
 
     try {
-        const res = await fetch(`http://localhost:3000/api/geo/direct?q=${q}&limit=5`);
+        const res = await fetch(`${BASE_URL}/geo/direct?q=${q}&limit=5`);
         const data = await res.json();
         dropdown.innerHTML = '';
         if (!data.length) { dropdown.classList.remove('open'); return; }
@@ -182,7 +182,7 @@ async function doCompare() {
 
 async function fetchCityData(city) {
     try {
-        const geoRes = await fetch(`http://localhost:3000/api/geo/direct?q=${city}&limit=1`);
+        const geoRes = await fetch(`${BASE_URL}/geo/direct?q=${city}&limit=1`);
         const geoData = await geoRes.json();
         if (!geoData.length) throw new Error(`City "${city}" not found.`);
         const { lat, lon, name, country } = geoData[0];

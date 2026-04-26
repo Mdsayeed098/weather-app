@@ -60,7 +60,9 @@ let currentDataCache = null;
 let forecastDataCache = null;
 let tenDayDataCache = null;
 
-const BASE_URL = 'http://localhost:3000/api'; // Proxies to Node.js backend
+const BASE_URL = '/api'; // Proxies to Node.js backend
+const OPEN_METEO_BASE = 'https://api.open-meteo.com/v1/forecast';
+const UNIT_LABELS = { C: '°C', F: '°F' };
 
 // ─── CACHE LAYER ──────────────────────────────────────────────────────────────
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
@@ -251,7 +253,7 @@ function showLoaders() {
 async function fetchAllDataByCity(city) {
     showLoaders();
     try {
-        const geoRes = await fetch(`http://localhost:3000/api/geo/direct?q=${city}&limit=1`);
+        const geoRes = await fetch(`${BASE_URL}/geo/direct?q=${city}&limit=1`);
         const geoData = await geoRes.json();
         if (!geoData.length) throw new Error('City not found');
         const { lat, lon, name, state, country } = geoData[0];
@@ -327,7 +329,7 @@ async function handleAutocomplete() {
     if (!q) return renderDropdown(recentSearches, true);
 
     try {
-        const res = await fetch(`http://localhost:3000/api/geo/direct?q=${q}&limit=5`);
+        const res = await fetch(`${BASE_URL}/geo/direct?q=${q}&limit=5`);
         const data = await res.json();
         renderDropdown(data, false);
     } catch (err) { console.error(err); }
