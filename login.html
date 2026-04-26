@@ -244,36 +244,21 @@
         // Redirect if already logged in
         getSession().then(s => { if (s) window.location.href = 'index.html'; });
 
-        // Theme Toggle (3-mode: dark → light → auto/weather)
+        // Theme Toggle
         const html = document.documentElement;
         const themeIcon = document.getElementById('theme-icon');
         let currentTheme = localStorage.getItem('theme') || 'dark';
-        if (!['dark','light','auto'].includes(currentTheme)) currentTheme = 'dark';
-        function getWeatherThemeName(tempC) {
-            if (tempC > 35) return 'weather-hot';
-            if (tempC > 25) return 'weather-warm';
-            if (tempC > 15) return 'weather-mild';
-            if (tempC > 5) return 'weather-cool';
-            if (tempC > 0) return 'weather-cold';
-            return 'weather-freezing';
-        }
+        if (!['dark','light'].includes(currentTheme)) currentTheme = 'dark';
+        
         function applyTheme() {
             localStorage.setItem('theme', currentTheme);
-            if (currentTheme === 'auto') {
-                const lastTemp = parseFloat(localStorage.getItem('lastTempC'));
-                const wt = isNaN(lastTemp) ? 'weather-mild' : getWeatherThemeName(lastTemp);
-                html.setAttribute('data-theme', wt);
-                themeIcon.className = 'fa-solid fa-temperature-half';
-            } else {
-                html.setAttribute('data-theme', currentTheme);
-                themeIcon.className = currentTheme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
-            }
+            html.setAttribute('data-theme', currentTheme);
+            themeIcon.className = currentTheme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
         }
         applyTheme();
+        
         document.getElementById('theme-toggle').addEventListener('click', () => {
-            if (currentTheme === 'dark') currentTheme = 'light';
-            else if (currentTheme === 'light') currentTheme = 'auto';
-            else currentTheme = 'dark';
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
             applyTheme();
         });
 

@@ -181,36 +181,36 @@ async function doCompare() {
 }
 
 async function fetchCityData(city) {
-    // Geocode first
-    const geoRes = await fetch(`http://localhost:3000/api/geo/direct?q=${city}&limit=1`);
-    const geoData = await geoRes.json();
-    if (!geoData.length) throw new Error(`City "${city}" not found.`);
-    const { lat, lon, name, country } = geoData[0];
+    try {
+        const geoRes = await fetch(`http://localhost:3000/api/geo/direct?q=${city}&limit=1`);
+        const geoData = await geoRes.json();
+        if (!geoData.length) throw new Error(`City "${city}" not found.`);
+        const { lat, lon, name, country } = geoData[0];
 
-    // Check cache
-    const cacheKey = WeatherCache.makeKey(lat, lon);
-    const cached = WeatherCache.get(cacheKey);
-    if (cached) {
-        cached.current.name = name;
-        if (cached.current.sys) cached.current.sys.country = country;
-        return { current: cached.current, aqi: cached.aqi.list[0].main.aqi };
+        const [weatherRes, aqiRes, tenDayRes] = await Promise.all([
+            fetch(`${BASE_URL}/weather?lat=${lat}&lon=${lon}`),
+            fetch(`${BASE_URL}/air_pollution?lat=${lat}&lon=${lon}`),
+            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`)
+        ]);
+
+        if (!weatherRes.ok) throw new Error('Failed to fetch weather data.');
+
+        const weather = await weatherRes.json();
+        const aqiData = await aqiRes.json();
+        const tenDay = await tenDayRes.json();
+
+        return {
+            name,
+            country,
+            current: weather,
+            aqi: aqiData.list[0].main.aqi,
+            daily_min: tenDay.daily.temperature_2m_min[0] + 273.15, // Kelvin
+            daily_max: tenDay.daily.temperature_2m_max[0] + 273.15
+        };
+    } catch (err) {
+        console.error(err);
+        throw err;
     }
-
-    // Fetch fresh
-    const [weatherRes, aqiRes] = await Promise.all([
-        fetch(`${BASE_URL}/weather?lat=${lat}&lon=${lon}`),
-        fetch(`${BASE_URL}/air_pollution?lat=${lat}&lon=${lon}`)
-    ]);
-
-    if (!weatherRes.ok) throw new Error('Failed to fetch weather data.');
-
-    const weather = await weatherRes.json();
-    const aqiData = await aqiRes.json();
-
-    weather.name = name;
-    if (weather.sys) weather.sys.country = country;
-
-    return { current: weather, aqi: aqiData.list[0].main.aqi };
 }
 
 // ─── RENDER ───────────────────────────────────────────────────────────────────
@@ -218,30 +218,30 @@ function renderResults(dataA, dataB) {
     emptyDiv.style.display = 'none';
     resultsDiv.classList.add('visible');
 
-    const a = dataA.current;
-    const b = dataB.current;
-    const tempA = Math.round(a.main.temp - 273.15);
-    const tempB = Math.round(b.main.temp - 273.15);
+    const a = dataA;
+    const b = dataB;
+    const tempA = Math.round(a.current.main.temp - 273.15);
+    const tempB = Math.round(b.current.main.temp - 273.15);
 
     // Hero Cards
     heroesDiv.innerHTML = `
         <div class="city-hero ${getTempTheme(tempA)}">
             <div class="city-hero-name">${a.name}</div>
-            <div class="city-hero-country">${a.sys.country || ''}</div>
+            <div class="city-hero-country">${a.country || ''}</div>
             <div class="city-hero-temp-row">
-                <img class="city-hero-icon" src="https://openweathermap.org/img/wn/${a.weather[0].icon}@4x.png" alt="Weather">
-                <span class="city-hero-temp">${getTemp(a.main.temp)}${getTempUnit()}</span>
+                <img class="city-hero-icon" src="https://openweathermap.org/img/wn/${a.current.weather[0].icon}@4x.png" alt="Weather">
+                <span class="city-hero-temp">${getTemp(a.current.main.temp)}${getTempUnit()}</span>
             </div>
-            <div class="city-hero-desc">${a.weather[0].description}</div>
+            <div class="city-hero-desc">${a.current.weather[0].description}</div>
         </div>
         <div class="city-hero ${getTempTheme(tempB)}">
             <div class="city-hero-name">${b.name}</div>
-            <div class="city-hero-country">${b.sys.country || ''}</div>
+            <div class="city-hero-country">${b.country || ''}</div>
             <div class="city-hero-temp-row">
-                <img class="city-hero-icon" src="https://openweathermap.org/img/wn/${b.weather[0].icon}@4x.png" alt="Weather">
-                <span class="city-hero-temp">${getTemp(b.main.temp)}${getTempUnit()}</span>
+                <img class="city-hero-icon" src="https://openweathermap.org/img/wn/${b.current.weather[0].icon}@4x.png" alt="Weather">
+                <span class="city-hero-temp">${getTemp(b.current.main.temp)}${getTempUnit()}</span>
             </div>
-            <div class="city-hero-desc">${b.weather[0].description}</div>
+            <div class="city-hero-desc">${b.current.weather[0].description}</div>
         </div>
     `;
 
@@ -250,71 +250,71 @@ function renderResults(dataA, dataB) {
     const metrics = [
         {
             icon: 'fa-temperature-half', label: 'Temperature',
-            valA: `${getTemp(a.main.temp)}${getTempUnit()}`, valB: `${getTemp(b.main.temp)}${getTempUnit()}`,
+            valA: `${getTemp(a.current.main.temp)}${getTempUnit()}`, valB: `${getTemp(b.current.main.temp)}${getTempUnit()}`,
             winnerA: tempA > tempB, winnerB: tempB > tempA, subA: '', subB: ''
         },
         {
             icon: 'fa-temperature-half', label: 'Feels Like',
-            valA: `${getTemp(a.main.feels_like)}${getTempUnit()}`, valB: `${getTemp(b.main.feels_like)}${getTempUnit()}`,
+            valA: `${getTemp(a.current.main.feels_like)}${getTempUnit()}`, valB: `${getTemp(b.current.main.feels_like)}${getTempUnit()}`,
             winnerA: false, winnerB: false
         },
         {
             icon: 'fa-temperature-arrow-down', label: 'Min Temp',
-            valA: `${getTemp(a.main.temp_min)}${getTempUnit()}`, valB: `${getTemp(b.main.temp_min)}${getTempUnit()}`,
+            valA: `${getTemp(a.daily_min)}${getTempUnit()}`, valB: `${getTemp(b.daily_min)}${getTempUnit()}`,
             winnerA: false, winnerB: false
         },
         {
             icon: 'fa-temperature-arrow-up', label: 'Max Temp',
-            valA: `${getTemp(a.main.temp_max)}${getTempUnit()}`, valB: `${getTemp(b.main.temp_max)}${getTempUnit()}`,
+            valA: `${getTemp(a.daily_max)}${getTempUnit()}`, valB: `${getTemp(b.daily_max)}${getTempUnit()}`,
             winnerA: false, winnerB: false
         },
         {
             icon: 'fa-droplet', label: 'Humidity',
-            valA: `${a.main.humidity}%`, valB: `${b.main.humidity}%`,
-            winnerA: a.main.humidity < b.main.humidity, winnerB: b.main.humidity < a.main.humidity,
+            valA: `${a.current.main.humidity}%`, valB: `${b.current.main.humidity}%`,
+            winnerA: a.current.main.humidity < b.current.main.humidity, winnerB: b.current.main.humidity < a.current.main.humidity,
             subA: 'Lower is better', subB: 'Lower is better'
         },
         {
             icon: 'fa-wind', label: 'Wind Speed',
-            valA: getWindSpeed(a.wind.speed), valB: getWindSpeed(b.wind.speed),
+            valA: getWindSpeed(a.current.wind.speed), valB: getWindSpeed(b.current.wind.speed),
             winnerA: false, winnerB: false
         },
         {
             icon: 'fa-compass', label: 'Wind Direction',
-            valA: `${getWindDir(a.wind.deg)} (${a.wind.deg}°)`, valB: `${getWindDir(b.wind.deg)} (${b.wind.deg}°)`,
+            valA: `${getWindDir(a.current.wind.deg)} (${a.current.wind.deg}°)`, valB: `${getWindDir(b.current.wind.deg)} (${b.current.wind.deg}°)`,
             winnerA: false, winnerB: false
         },
         {
             icon: 'fa-gauge-high', label: 'Pressure',
-            valA: `${a.main.pressure} hPa`, valB: `${b.main.pressure} hPa`,
+            valA: `${a.current.main.pressure} hPa`, valB: `${b.current.main.pressure} hPa`,
             winnerA: false, winnerB: false
         },
         {
             icon: 'fa-eye', label: 'Visibility',
-            valA: getVisibility(a.visibility), valB: getVisibility(b.visibility),
-            winnerA: a.visibility > b.visibility, winnerB: b.visibility > a.visibility
+            valA: getVisibility(a.current.visibility), valB: getVisibility(b.current.visibility),
+            winnerA: a.current.visibility > b.current.visibility, winnerB: b.current.visibility > a.current.visibility
         },
         {
             icon: 'fa-leaf', label: 'Air Quality',
-            valA: `${dataA.aqi} — ${aqiLabels[dataA.aqi - 1] || '?'}`, valB: `${dataB.aqi} — ${aqiLabels[dataB.aqi - 1] || '?'}`,
-            winnerA: dataA.aqi < dataB.aqi, winnerB: dataB.aqi < dataA.aqi,
+            valA: `${a.aqi} — ${aqiLabels[a.aqi - 1] || '?'}`, valB: `${b.aqi} — ${aqiLabels[b.aqi - 1] || '?'}`,
+            winnerA: a.aqi < b.aqi, winnerB: b.aqi < a.aqi,
             subA: 'Lower is better', subB: 'Lower is better'
         },
         {
             icon: 'fa-cloud', label: 'Cloud Cover',
-            valA: `${a.clouds.all}%`, valB: `${b.clouds.all}%`,
+            valA: `${a.current.clouds.all}%`, valB: `${b.current.clouds.all}%`,
             winnerA: false, winnerB: false
         },
         {
             icon: 'fa-sun', label: 'Sunrise',
-            valA: a.sys.sunrise ? formatTime(a.sys.sunrise, a.timezone) : '—',
-            valB: b.sys.sunrise ? formatTime(b.sys.sunrise, b.timezone) : '—',
+            valA: a.current.sys.sunrise ? formatTime(a.current.sys.sunrise, a.current.timezone) : '—',
+            valB: b.current.sys.sunrise ? formatTime(b.current.sys.sunrise, b.current.timezone) : '—',
             winnerA: false, winnerB: false
         },
         {
             icon: 'fa-moon', label: 'Sunset',
-            valA: a.sys.sunset ? formatTime(a.sys.sunset, a.timezone) : '—',
-            valB: b.sys.sunset ? formatTime(b.sys.sunset, b.timezone) : '—',
+            valA: a.current.sys.sunset ? formatTime(a.current.sys.sunset, a.current.timezone) : '—',
+            valB: b.current.sys.sunset ? formatTime(b.current.sys.sunset, b.current.timezone) : '—',
             winnerA: false, winnerB: false
         }
     ];

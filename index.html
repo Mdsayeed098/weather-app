@@ -24,6 +24,13 @@
     <!-- Background overlay for weather effects -->
     <div id="weather-bg"></div>
 
+    <!-- Ambient orbs for deep dark theme -->
+    <div class="orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
     <!-- Auth Guard -->
     <div class="auth-overlay" id="auth-overlay">
         <div class="spinner"></div>
@@ -77,7 +84,7 @@
 
         <main class="dashboard-grid" id="main-content">
             
-            <!-- Left Col: Hero + Charts -->
+            <!-- Left Col: Sidebar -->
             <div class="hero-section">
                 <!-- Current Weather Hero -->
                 <div class="glass-card hero-card">
@@ -103,7 +110,7 @@
                     </div>
                 </div>
 
-                <!-- Hourly Forecast -->
+                <!-- Hourly Forecast (Today's Forecast) -->
                 <div class="glass-card">
                     <h3 class="section-title"><i class="fa-regular fa-clock"></i> Today's Forecast</h3>
                     <div class="hourly-strip" id="hourly-strip">
@@ -111,19 +118,11 @@
                     </div>
                 </div>
 
-                <!-- Temperature Chart -->
+                <!-- Temperature Chart (Temperature Trend) -->
                 <div class="glass-card">
                     <h3 class="section-title"><i class="fa-solid fa-chart-area"></i> Temperature Trend</h3>
                     <div class="chart-container">
                         <canvas id="tempChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Weather Insights -->
-                <div class="glass-card">
-                    <h3 class="section-title"><i class="fa-solid fa-lightbulb"></i> Smart Insights</h3>
-                    <div class="insights-grid" id="insights-list">
-                        <!-- Filled by JS -->
                     </div>
                 </div>
 
@@ -139,24 +138,21 @@
 
             </div>
 
-            <!-- Right Col: Detail Cards + 5-Day -->
+            <!-- Right Col: Content Area -->
             <div class="right-col" style="display: flex; flex-direction: column; gap: 20px;">
                 
+                <!-- Details Grid -->
                 <div class="details-grid">
-                    <!-- UV Index -->
                     <div class="glass-card detail-card">
                         <div class="detail-head"><i class="fa-solid fa-sun"></i> UV Index</div>
                         <div class="detail-val skeleton" id="uv-val" style="min-height: 35px; width: 50%;">--</div>
                         <div class="detail-sub" id="uv-desc">--</div>
                     </div>
 
-                    <!-- Wind -->
                     <div class="glass-card detail-card">
                         <div class="detail-head"><i class="fa-solid fa-wind"></i> Wind</div>
                         <div class="wind-compass">
-                            <div class="compass-circle">
-                                <i class="fa-solid fa-location-arrow" id="wind-dir-icon"></i>
-                            </div>
+                            <div class="compass-circle"><i class="fa-solid fa-location-arrow" id="wind-dir-icon"></i></div>
                             <div>
                                 <div class="detail-val skeleton" id="wind-speed" style="min-height: 35px; width: 80px; font-size: 1.4rem;">--</div>
                                 <div class="detail-sub" id="wind-dir-text">--</div>
@@ -164,63 +160,51 @@
                         </div>
                     </div>
 
-                    <!-- Humidity -->
                     <div class="glass-card detail-card">
                         <div class="detail-head"><i class="fa-solid fa-droplet"></i> Humidity</div>
                         <div class="detail-val skeleton" id="humidity" style="min-height: 35px; width: 60px;">--</div>
-                        <div class="detail-sub">The dew point is <span id="dew-point">--</span>°</div>
+                        <div class="detail-sub">Dew pt: <span id="dew-point">--</span>°</div>
                         <div class="progress-bg"><div class="progress-bar" id="hum-bar" style="width: 0%"></div></div>
                     </div>
 
-                    <!-- Feels Like -->
                     <div class="glass-card detail-card">
                         <div class="detail-head"><i class="fa-solid fa-temperature-half"></i> Feels Like</div>
                         <div class="detail-val skeleton" id="feels-like" style="min-height: 35px; width: 60px;">--</div>
                         <div class="detail-sub" id="feels-desc">--</div>
                     </div>
 
-                    <!-- AQI -->
                     <div class="glass-card detail-card">
                         <div class="detail-head"><i class="fa-solid fa-leaf"></i> Air Quality</div>
                         <div class="detail-val skeleton" id="aqi-val" style="min-height: 35px; width: 40px;">--</div>
                         <div class="aqi-badge skeleton" id="aqi-badge" style="width: 80px; height: 24px;">--</div>
                     </div>
 
-                    <!-- Sun & Moon -->
-                    <div class="glass-card detail-card" style="grid-column: span 2;">
-                        <div class="detail-head"><i class="fa-solid fa-eclipse"></i> Sun & Moon</div>
-                        <div class="sun-times">
-                            <div class="sun-item">
-                                <label>Sunrise</label>
-                                <span class="skeleton" id="sunrise" style="min-height: 25px; width: 60px;">--</span>
-                            </div>
-                            <div class="sun-item">
-                                <label>Sunset</label>
-                                <span class="skeleton" id="sunset" style="min-height: 25px; width: 60px;">--</span>
-                            </div>
-                            <div class="sun-item" style="text-align: right;">
-                                <label>Moon Phase</label>
-                                <span class="skeleton" id="moon-phase" style="min-height: 25px; width: 100px;">--</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Pressure & Visibility -->
                     <div class="glass-card detail-card">
                         <div class="detail-head"><i class="fa-solid fa-gauge-high"></i> Pressure</div>
                         <div class="detail-val skeleton" id="pressure" style="min-height: 35px; width: 80px; font-size: 1.4rem;">--</div>
                         <div class="detail-sub">hPa</div>
                     </div>
+
                     <div class="glass-card detail-card">
                         <div class="detail-head"><i class="fa-solid fa-eye"></i> Visibility</div>
                         <div class="detail-val skeleton" id="visibility" style="min-height: 35px; width: 80px; font-size: 1.4rem;">--</div>
                         <div class="detail-sub" id="vis-desc">--</div>
                     </div>
+
+                    <!-- Sun & Moon spans the rest? -->
+                    <div class="glass-card detail-card">
+                        <div class="detail-head"><i class="fa-solid fa-moon"></i> Sun & Moon</div>
+                        <div class="sun-times">
+                            <div class="sun-item"><label>Rise</label><span class="skeleton" id="sunrise" style="min-height: 20px; width: 45px;">--</span></div>
+                            <div class="sun-item"><label>Set</label><span class="skeleton" id="sunset" style="min-height: 20px; width: 45px;">--</span></div>
+                        </div>
+                        <div class="detail-sub" id="moon-phase" style="text-align: center; margin-top: 5px;">--</div>
+                    </div>
                 </div>
 
-                <!-- 5 Day Forecast -->
+                <!-- 10 Day Forecast (Powered by Open-Meteo) -->
                 <div class="glass-card">
-                    <h3 class="section-title"><i class="fa-regular fa-calendar-days"></i> 5-Day Forecast</h3>
+                    <h3 class="section-title"><i class="fa-regular fa-calendar-days"></i> 10-Day Detailed Forecast</h3>
                     <div class="daily-grid" id="daily-grid">
                         <!-- Filled by JS -->
                     </div>
@@ -228,10 +212,21 @@
             </div>
         </main>
 
-        <!-- Live Radar Full Width -->
-        <div class="glass-card full-width-map">
-            <h3 class="section-title"><i class="fa-solid fa-map-location-dot"></i> Live Radar</h3>
-            <div id="map" class="skeleton"></div>
+        <!-- Bottom Section: Insights & Radar -->
+        <div class="bottom-section" style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Weather Insights -->
+            <div class="glass-card">
+                <h3 class="section-title"><i class="fa-solid fa-lightbulb"></i> Smart Weather Insights</h3>
+                <div class="insights-grid" id="insights-list">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+
+            <!-- Live Radar Full Width -->
+            <div class="glass-card full-width-map">
+                <h3 class="section-title"><i class="fa-solid fa-map-location-dot"></i> Live Radar</h3>
+                <div id="map" class="skeleton"></div>
+            </div>
         </div>
     </div>
 

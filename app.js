@@ -58,6 +58,7 @@ if (!Array.isArray(recentSearches)) recentSearches = [];
 
 let currentDataCache = null;
 let forecastDataCache = null;
+let tenDayDataCache = null;
 
 const BASE_URL = 'http://localhost:3000/api'; // Proxies to Node.js backend
 
@@ -160,13 +161,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
+
+
 function getWeatherThemeName(tempC) {
-    if (tempC > 35) return 'weather-hot';
-    if (tempC > 25) return 'weather-warm';
-    if (tempC > 15) return 'weather-mild';
-    if (tempC > 5) return 'weather-cool';
-    if (tempC > 0) return 'weather-cold';
-    return 'weather-freezing';
+    if (tempC >= 40) return 'weather-hot';
+    if (tempC >= 30) return 'weather-warm';
+    if (tempC >= 20) return 'weather-mild';
+    if (tempC >= 10) return 'weather-cool';
+    return 'weather-cold';
 }
 
 function isThemeDark() {
@@ -175,25 +177,36 @@ function isThemeDark() {
 }
 
 function applyTheme() {
-    localStorage.setItem('theme', currentTheme);
+    let themeToApply = currentTheme;
     if (currentTheme === 'auto') {
-        // Apply weather-based theme from last known temp
         const lastTemp = parseFloat(localStorage.getItem('lastTempC'));
-        const weatherTheme = isNaN(lastTemp) ? 'weather-mild' : getWeatherThemeName(lastTemp);
-        document.documentElement.setAttribute('data-theme', weatherTheme);
-        themeIcon.className = 'fa-solid fa-temperature-half';
-    } else {
-        document.documentElement.setAttribute('data-theme', currentTheme);
-        themeIcon.className = currentTheme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+        themeToApply = isNaN(lastTemp) ? 'weather-mild' : getWeatherThemeName(lastTemp);
     }
+    
+    document.documentElement.setAttribute('data-theme', themeToApply);
+    localStorage.setItem('theme', currentTheme);
 
-    // Update tooltip on toggle button
+    // Refresh background state
+    if (currentDataCache) updateDynamicBackground(currentDataCache.weather[0].icon);
+    
+    // Smoothly update orbs visibility
+    const orbs = document.querySelector('.orbs');
+    if (orbs) orbs.style.opacity = (currentTheme === 'light') ? '0.2' : '1';
+    
+    // Update theme toggle icon
+    if (themeIcon) {
+        if (currentTheme === 'auto') themeIcon.className = 'fa-solid fa-temperature-half';
+        else themeIcon.className = currentTheme === 'light' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    }
+    
+    // Refresh chart if data exists
+    if (tenDayDataCache) renderTemperatureChart(tenDayDataCache);
+    
     const labels = { dark: 'Dark Mode', light: 'Light Mode', auto: 'Weather Mode' };
     themeToggle.title = labels[currentTheme] || 'Toggle Theme';
 }
 
 function applyWeatherTheme(tempK) {
-    // Store temperature for other pages and for theme reapplication
     const tempC = Math.round(tempK - 273.15);
     localStorage.setItem('lastTempC', tempC);
     if (currentTheme === 'auto') {
@@ -258,16 +271,18 @@ async function fetchAllData(lat, lon, overrideName = null, overrideCountry = nul
         let cached = WeatherCache.get(cacheKey);
         let currentData, forecastData, aqiData;
 
-        if (cached) {
+        if (cached && cached.tenDay && cached.tenDay.hourly) {
             currentData = cached.current;
             forecastData = cached.forecast;
             aqiData = cached.aqi;
+            tenDayData = cached.tenDay;
             console.log('📦 Using cached data');
         } else {
-            const [currentRes, forecastRes, aqiRes] = await Promise.all([
+            const [currentRes, forecastRes, aqiRes, tenDayRes] = await Promise.all([
                 fetch(`${BASE_URL}/weather?lat=${lat}&lon=${lon}`),
                 fetch(`${BASE_URL}/forecast?lat=${lat}&lon=${lon}`),
-                fetch(`${BASE_URL}/air_pollution?lat=${lat}&lon=${lon}`)
+                fetch(`${BASE_URL}/air_pollution?lat=${lat}&lon=${lon}`),
+                fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,relative_humidity_2m_max&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=10`)
             ]);
 
             if (!currentRes.ok) throw new Error('Failed to fetch weather data');
@@ -275,8 +290,9 @@ async function fetchAllData(lat, lon, overrideName = null, overrideCountry = nul
             currentData = await currentRes.json();
             forecastData = await forecastRes.json();
             aqiData = await aqiRes.json();
+            tenDayData = await tenDayRes.json();
 
-            WeatherCache.set(cacheKey, { current: currentData, forecast: forecastData, aqi: aqiData });
+            WeatherCache.set(cacheKey, { current: currentData, forecast: forecastData, aqi: aqiData, tenDay: tenDayData });
         }
 
         if (overrideName) currentData.name = overrideName;
@@ -291,9 +307,9 @@ async function fetchAllData(lat, lon, overrideName = null, overrideCountry = nul
         applyWeatherTheme(currentData.main.temp);
         updateCurrentUI(currentData);
         updateDetailCards(currentData, aqi);
-        renderHourlyStrip(forecastData);
-        render5DayForecast(forecastData);
-        renderTemperatureChart(forecastData);
+        renderHourlyForecast(tenDayData);
+        render10DayForecast(tenDayData);
+        renderTemperatureChart(tenDayData);
         renderMap(lat, lon, currentData);
         generateWeatherAlerts(currentData, aqi);
         generateInsights(currentData, forecastData, aqi);
@@ -350,6 +366,15 @@ function saveRecentSearch(city) {
 // ─── UI UPDATES ───────────────────────────────────────────────────────────────
 function updateDynamicBackground(iconCode) {
     const bg = document.getElementById('weather-bg');
+    if (!bg) return;
+
+    // In Dark Mode, we use the Gemini Generated Image via CSS.
+    // We clear the inline background to let the CSS background-image show.
+    if (document.documentElement.getAttribute('data-theme') === 'dark') {
+        bg.style.background = '';
+        return;
+    }
+
     const isDay = iconCode.includes('d');
     
     if (!isDay) bg.style.background = 'var(--grad-night)';
@@ -398,9 +423,19 @@ function updateDetailCards(data, aqi) {
 
     // AQI
     const aqiLabels = ['Good', 'Fair', 'Moderate', 'Poor', 'Very Poor'];
+    const aqiColors = ['#4ade80', '#facc15', '#fb923c', '#f87171', '#c084fc'];
     aqiVal.textContent = aqi;
     aqiBadge.textContent = aqiLabels[aqi-1] || 'Unknown';
     aqiBadge.className = `aqi-badge aqi-${aqi}`;
+    
+    const gaugeFill = document.getElementById('aqi-gauge-fill');
+    if (gaugeFill) {
+        const circumference = 2 * Math.PI * 45;
+        const offset = circumference - (aqi / 5) * circumference;
+        gaugeFill.style.strokeDashoffset = offset;
+        gaugeFill.style.stroke = aqiColors[aqi-1] || 'var(--neon-blue)';
+        gaugeFill.style.filter = `drop-shadow(0 0 8px ${aqiColors[aqi-1]}44)`;
+    }
 
     // Sunrise/Sunset
     if (data.sys.sunrise && data.sys.sunset) {
@@ -421,60 +456,106 @@ function updateDetailCards(data, aqi) {
     uvDesc.textContent = uv > 5 ? 'High. Use protection.' : 'Low level.';
 }
 
-function renderHourlyStrip(data) {
+function renderHourlyForecast(data) {
+    if (!data || !data.hourly) return;
     const strip = document.getElementById('hourly-strip');
     strip.innerHTML = '';
     
-    // Get next 8 items (24 hours)
-    data.list.slice(0, 8).forEach(item => {
-        const date = new Date((item.dt + data.city.timezone) * 1000);
-        const time = date.toISOString().substr(11,5);
-        const icon = item.weather[0].icon;
-        
-        strip.innerHTML += `
-            <div class="hourly-item">
-                <span class="hourly-time">${time}</span>
-                <img class="hourly-icon" src="https://openweathermap.org/img/wn/${icon}.png" alt="icon">
-                <span class="hourly-temp">${getTemp(item.main.temp)}°</span>
-            </div>
+    const wmoCodes = {
+        0: '01d', 1: '02d', 2: '03d', 3: '04d',
+        45: '50d', 48: '50d', 51: '09d', 61: '10d', 71: '13d', 80: '09d', 95: '11d'
+    };
+
+    const now = new Date();
+    data.hourly.time.forEach((time, i) => {
+        const d = new Date(time);
+        if (d < now && i > 0) return;
+        if (strip.children.length >= 24) return;
+
+        const hour = d.getHours();
+        const displayTime = hour === 0 ? '12 AM' : hour > 12 ? (hour-12)+' PM' : hour === 12 ? '12 PM' : hour+' AM';
+        const temp = isCelsius ? Math.round(data.hourly.temperature_2m[i]) : Math.round(data.hourly.temperature_2m[i] * 9/5 + 32);
+        const icon = wmoCodes[data.hourly.weathercode[i]] || '03d';
+
+        const div = document.createElement('div');
+        div.className = 'hourly-item';
+        div.innerHTML = `
+            <span class="hourly-time">${displayTime}</span>
+            <img class="hourly-icon" src="https://openweathermap.org/img/wn/${icon}.png" alt="icon">
+            <span class="hourly-temp">${temp}°</span>
         `;
+        strip.appendChild(div);
     });
 }
 
-function render5DayForecast(data) {
+function render10DayForecast(data) {
     const grid = document.getElementById('daily-grid');
     grid.innerHTML = '';
+    
+    // Map Open-Meteo weather codes to OWM-style descriptions
+    const wmoCodes = {
+        0: ['Clear', '01d'], 1: ['Mostly Clear', '02d'], 2: ['Partly Cloudy', '03d'], 3: ['Overcast', '04d'],
+        45: ['Foggy', '50d'], 48: ['Rime Fog', '50d'],
+        51: ['Drizzle', '09d'], 53: ['Drizzle', '09d'], 55: ['Heavy Drizzle', '09d'],
+        61: ['Rain', '10d'], 63: ['Rain', '10d'], 65: ['Heavy Rain', '10d'],
+        71: ['Snow', '13d'], 73: ['Snow', '13d'], 75: ['Heavy Snow', '13d'],
+        80: ['Showers', '09d'], 81: ['Showers', '09d'], 82: ['Heavy Showers', '09d'],
+        95: ['Thunderstorm', '11d'], 96: ['Storm+Hail', '11d'], 99: ['Severe Storm', '11d']
+    };
 
-    // Extract one reading per day (e.g. at 12:00)
-    const dailyData = data.list.filter(item => item.dt_txt.includes('12:00:00'));
-
-    dailyData.forEach(day => {
-        const date = new Date((day.dt + data.city.timezone) * 1000);
-        const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getUTCDay()];
+    data.daily.time.forEach((time, i) => {
+        const date = new Date(time);
+        const dayName = i === 0 ? 'Today' : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()];
+        const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+        const code = data.daily.weathercode[i];
+        const [desc, icon] = wmoCodes[code] || ['Cloudy', '03d'];
         
-        grid.innerHTML += `
-            <div class="daily-item">
+        const tempMax = isCelsius ? Math.round(data.daily.temperature_2m_max[i]) : Math.round(data.daily.temperature_2m_max[i] * 9/5 + 32);
+        const tempMin = isCelsius ? Math.round(data.daily.temperature_2m_min[i]) : Math.round(data.daily.temperature_2m_min[i] * 9/5 + 32);
+        const humidity = Math.round(data.daily.relative_humidity_2m_max[i]);
+
+        const div = document.createElement('div');
+        div.className = 'daily-item';
+        div.innerHTML = `
+            <div class="daily-date-col">
                 <span class="daily-day">${dayName}</span>
-                <img class="daily-icon" src="https://openweathermap.org/img/wn/${day.weather[0].icon}.png" alt="icon">
-                <span class="daily-desc">${day.weather[0].description}</span>
-                <div class="daily-temps">
-                    <span class="min">${getTemp(day.main.temp_min)}°</span>
-                    <span class="max">${getTemp(day.main.temp_max)}°</span>
-                </div>
+                <span class="daily-date">${dateStr}</span>
+            </div>
+            <div class="daily-temp-col">
+                <img class="daily-icon" src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="icon">
+                <span class="daily-temp-main">${tempMax}°</span>
+                <span class="daily-temp-min">${tempMin}°</span>
+            </div>
+            <div class="daily-desc-col">
+                <span class="day-desc">${desc}</span>
+                <span class="night-desc"><i class="fa-solid fa-moon"></i> Clear sky</span>
+            </div>
+            <div class="daily-hum-col">
+                <i class="fa-solid fa-droplet"></i> ${humidity}%
             </div>
         `;
+        grid.appendChild(div);
     });
 }
 
+
 function renderTemperatureChart(data) {
+    if (!data || !data.hourly) return;
     const ctx = document.getElementById('tempChart').getContext('2d');
     
     const labels = [];
     const temps = [];
-    data.list.slice(0, 8).forEach(item => {
-        const d = new Date((item.dt + data.city.timezone) * 1000);
-        labels.push(d.toISOString().substr(11,5));
-        temps.push(getTemp(item.main.temp));
+    const now = new Date();
+    
+    data.hourly.time.forEach((time, i) => {
+        const d = new Date(time);
+        if (d < now && i > 0) return; 
+        if (labels.length >= 24) return;
+
+        const hour = d.getHours();
+        labels.push(hour === 0 ? '12 AM' : hour > 12 ? (hour-12)+' PM' : hour === 12 ? '12 PM' : hour+' AM');
+        const temp = isCelsius ? Math.round(data.hourly.temperature_2m[i]) : Math.round(data.hourly.temperature_2m[i] * 9/5 + 32);
+        temps.push(temp);
     });
 
     const dark = isThemeDark();
@@ -484,8 +565,11 @@ function renderTemperatureChart(data) {
     if (tempChartInstance) tempChartInstance.destroy();
 
     const gradient = ctx.createLinearGradient(0, 0, 0, 250);
-    gradient.addColorStop(0, 'rgba(79, 172, 254, 0.5)');
-    gradient.addColorStop(1, 'rgba(79, 172, 254, 0.0)');
+    gradient.addColorStop(0, dark ? 'rgba(79, 172, 254, 0.3)' : 'rgba(79, 172, 254, 0.2)');
+    gradient.addColorStop(1, 'rgba(79, 172, 254, 0)');
+
+    const maxTemp = Math.max(...temps);
+    const minTemp = Math.min(...temps);
 
     tempChartInstance = new Chart(ctx, {
         type: 'line',
@@ -494,21 +578,30 @@ function renderTemperatureChart(data) {
             datasets: [{
                 label: 'Temperature',
                 data: temps,
-                borderColor: '#4facfe',
+                borderColor: dark ? '#4facfe' : '#3b82f6',
                 borderWidth: 3,
                 backgroundColor: gradient,
                 fill: true,
                 tension: 0.4,
-                pointBackgroundColor: '#4facfe',
-                pointBorderColor: dark ? '#0a0e1a' : '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6
+                pointBackgroundColor: (ctx) => {
+                    if (ctx.raw === maxTemp) return '#ff4b2b';
+                    if (ctx.raw === minTemp) return '#4facfe';
+                    return 'transparent';
+                },
+                pointBorderColor: '#fff',
+                pointBorderWidth: (ctx) => (ctx.raw === maxTemp || ctx.raw === minTemp) ? 2 : 0,
+                pointRadius: (ctx) => (ctx.raw === maxTemp || ctx.raw === minTemp) ? 5 : 0,
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderWidth: 2,
+                pointHoverBorderColor: '#4facfe'
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            hover: { mode: 'index', intersect: false },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -521,10 +614,45 @@ function renderTemperatureChart(data) {
                 }
             },
             scales: {
-                x: { grid: { display: false, drawBorder: false }, ticks: { color: textColor, font: { family: 'Inter' } } },
-                y: { grid: { color: gridColor, drawBorder: false }, ticks: { color: textColor, stepSize: 2, callback: (v) => v + '°' } }
+                x: { 
+                    grid: { display: false, drawBorder: false }, 
+                    ticks: { 
+                        color: textColor, 
+                        maxRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: 8, // Don't crowd the labels
+                        font: { family: 'Inter', size: 10 } 
+                    } 
+                },
+                y: { 
+                    grid: { color: gridColor, drawBorder: false }, 
+                    ticks: { color: textColor, stepSize: 2, callback: (v) => v + '°' },
+                    suggestedMax: Math.max(...temps) + 3,
+                    suggestedMin: Math.min(...temps) - 2
+                }
             }
-        }
+        },
+        plugins: [{
+            id: 'verticalLine',
+            afterDatasetsDraw: chart => {
+                const activeElements = chart.getActiveElements();
+                if (activeElements && activeElements.length > 0) {
+                    const activePoint = activeElements[0];
+                    const x = activePoint.element.x;
+                    const yAxis = chart.scales.y;
+                    const ctx = chart.ctx;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.setLineDash([4, 4]);
+                    ctx.moveTo(x, yAxis.top);
+                    ctx.lineTo(x, yAxis.bottom);
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)';
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+        }]
     });
 }
 
@@ -538,7 +666,7 @@ function renderMap(lat, lon, currentData) {
 
         L.tileLayer(basemap, { attribution: '© Google Maps' }).addTo(map);
 
-        tileLayer = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`, {
+        tileLayer = L.tileLayer(`${BASE_URL}/map/precipitation_new/{z}/{x}/{y}.png`, {
             opacity: 0.6, attribution: '© OpenWeatherMap'
         }).addTo(map);
 

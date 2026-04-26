@@ -53,6 +53,23 @@ app.get('/api/air_pollution', (req, res) => fetchFromOWM(req, res, BASE_URL, '/a
 // Geo Data
 app.get('/api/geo/direct', (req, res) => fetchFromOWM(req, res, GEO_URL, '/direct'));
 
+// Map Tiles Proxy
+app.get('/api/map/:layer/:z/:x/:y.png', async (req, res) => {
+    try {
+        const { layer, z, x, y } = req.params;
+        const url = `https://tile.openweathermap.org/map/${layer}/${z}/${x}/${y}.png?appid=${API_KEY}`;
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch tile');
+        
+        // Forward the image data
+        res.setHeader('Content-Type', 'image/png');
+        response.body.pipe(res);
+    } catch (error) {
+        res.status(500).send('Tile fetch error');
+    }
+});
+
 // Start the server
 app.listen(PORT, () => {
     console.log(`✅ Secure Weather Backend running on http://localhost:${PORT}`);

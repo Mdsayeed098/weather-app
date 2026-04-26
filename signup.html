@@ -106,10 +106,10 @@
 </section>
 
 <!-- ═══════════════ FEATURES ═══════════════ -->
-<section class="section">
+<section class="section" id="features">
   <div class="sec-head">
-    <div class="sec-label">Why WeatherIQ</div>
-    <h2 class="sec-title">Built for the <span class="grad-txt">modern world</span></h2>
+    <div class="sec-label">Features</div>
+    <h2 class="sec-title">Intelligence <span class="grad-txt">at your fingertips</span></h2>
     <p class="sec-desc">A premium weather intelligence platform loaded with real-time features.</p>
   </div>
   <div class="features-grid">
@@ -132,6 +132,28 @@
       <div class="feat-ico i4"><i class="fa-solid fa-palette"></i></div>
       <h3>Dynamic Themes</h3>
       <p>Our intelligent 3-mode theme system dynamically adapts its colors to match the live temperature of your location.</p>
+    </div>
+    
+    <!-- NEW ADDED FEATURES -->
+    <div class="feat-card" data-delay="400">
+      <div class="feat-ico i5"><i class="fa-solid fa-satellite-dish"></i></div>
+      <h3>Interactive Radar</h3>
+      <p>Explore high-resolution live weather maps with layers for precipitation, wind, and global clouds.</p>
+    </div>
+    <div class="feat-card" data-delay="500">
+      <div class="feat-ico i6"><i class="fa-solid fa-calendar-days"></i></div>
+      <h3>10-Day Forecast</h3>
+      <p>Plan ahead with hyper-local, high-accuracy extended projections for every day of the upcoming week.</p>
+    </div>
+    <div class="feat-card" data-delay="600">
+      <div class="feat-ico i7"><i class="fa-solid fa-wind"></i></div>
+      <h3>AQI Monitoring</h3>
+      <p>Stay healthy with real-time tracking of pollutants, pollen levels, and air quality index for your area.</p>
+    </div>
+    <div class="feat-card" data-delay="700">
+      <div class="feat-ico i8"><i class="fa-solid fa-moon"></i></div>
+      <h3>Astronomical Details</h3>
+      <p>Track precise moon phases, illumination, and accurate sunrise/sunset times for any global location.</p>
     </div>
   </div>
 </section>
@@ -207,7 +229,7 @@
         <li><a href="#">About</a></li>
         <li><a href="#">Blog</a></li>
         <li><a href="#">Careers</a></li>
-        <li><a href="#">Contact</a></li>
+        <li><a href="mailto:sayeedmd4730@gmail.com" title="Click to email">Contact: 9866830908</a></li>
       </ul>
     </div>
     <div class="footer-col">
@@ -222,10 +244,9 @@
   <div class="footer-bottom">
     <p>© 2026 WeatherIQ. All rights reserved.</p>
     <div class="social-icons">
-      <a href="#" title="Twitter"><i class="fa-brands fa-x-twitter"></i></a>
-      <a href="#" title="GitHub"><i class="fa-brands fa-github"></i></a>
-      <a href="#" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
-      <a href="#" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+      <a href="https://github.com/Mdsayeed098" target="_blank" title="GitHub"><i class="fa-brands fa-github"></i></a>
+      <a href="https://www.linkedin.com/in/sayeed-mohammad-68945a327/" target="_blank" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+      <a href="https://www.instagram.com/mdsayeed1234/" target="_blank" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
     </div>
   </div>
 </footer>
@@ -234,36 +255,21 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
 <script>
-// ── Theme Toggle (3-mode: dark → light → auto/weather) ──
+// ── Theme Toggle ──
 const html = document.documentElement;
 const themeIcon = document.getElementById('theme-icon');
 let currentTheme = localStorage.getItem('theme') || 'dark';
-if (!['dark','light','auto'].includes(currentTheme)) currentTheme = 'dark';
-function getWeatherThemeName(tempC) {
-  if (tempC > 35) return 'weather-hot';
-  if (tempC > 25) return 'weather-warm';
-  if (tempC > 15) return 'weather-mild';
-  if (tempC > 5) return 'weather-cool';
-  if (tempC > 0) return 'weather-cold';
-  return 'weather-freezing';
-}
+if (!['dark','light'].includes(currentTheme)) currentTheme = 'dark';
+
 function applyTheme() {
   localStorage.setItem('theme', currentTheme);
-  if (currentTheme === 'auto') {
-    const lastTemp = parseFloat(localStorage.getItem('lastTempC'));
-    const wt = isNaN(lastTemp) ? 'weather-mild' : getWeatherThemeName(lastTemp);
-    html.setAttribute('data-theme', wt);
-    themeIcon.className = 'fa-solid fa-temperature-half';
-  } else {
-    html.setAttribute('data-theme', currentTheme);
-    themeIcon.className = currentTheme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
-  }
+  html.setAttribute('data-theme', currentTheme);
+  themeIcon.className = currentTheme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
 }
 applyTheme();
+
 document.getElementById('theme-toggle').addEventListener('click', () => {
-  if (currentTheme === 'dark') currentTheme = 'light';
-  else if (currentTheme === 'light') currentTheme = 'auto';
-  else currentTheme = 'dark';
+  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
   applyTheme();
 });
 
