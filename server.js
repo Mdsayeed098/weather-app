@@ -3,11 +3,20 @@ const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 
+const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from the root directory
+app.use(express.static(path.join(__dirname, './')));
+
+// Root route - serve landing page
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 const API_KEY = process.env.OPENWEATHER_API_KEY;
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';

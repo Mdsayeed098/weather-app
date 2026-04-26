@@ -30,8 +30,10 @@ async function signOut() {
 }
 
 async function resetPassword(email) {
+    // Dynamically get the current origin (works for both localhost and Vercel)
+    const siteUrl = window.location.origin;
     return await supabaseClient.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/login.html',
+        redirectTo: `${siteUrl}/login.html`,
     });
 }
 
