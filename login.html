@@ -234,15 +234,15 @@
         </form>
 
         <div class="footer-link">
-            Don't have an account? <a href="signup.html">Create one</a>
+            Don't have an account? <a href="index.html">Create one</a>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="auth.js"></script>
     <script>
-        // Redirect if already logged in
-        getSession().then(s => { if (s) window.location.href = 'index.html'; });
+        // Check if already logged in
+        getSession().then(s => { if (s) window.location.href = 'dashboard.html'; });
 
         // Theme Toggle
         const html = document.documentElement;
@@ -327,7 +327,7 @@
             if (error) {
                 showError(error.message);
             } else {
-                window.location.href = 'index.html';
+                window.location.href = 'dashboard.html';
             }
         });
 
